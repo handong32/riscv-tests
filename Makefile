@@ -23,7 +23,7 @@ all: danabench xdhello testfloat
 danabench: DANA_BENCHMARK.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
-xdhello: xdhello.c
+xdhello: tests/xdhello.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
 testfloat: testfloat.c
@@ -39,6 +39,9 @@ pthreadHello: tests/pthreadHello.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
 forkTest: tests/forkTest.c
+	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+
+forkASID: tests/forkASID.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
 mnt:
@@ -60,12 +63,19 @@ doumount:
 
 install_xdhello: domount xdhello
 	sudo cp xdhello mnt/home
+	make doumount
 
 install_pthreadHello: domount pthreadHello
 	sudo cp pthreadHello mnt/home
+	make doumount
 
 install_forkTest: domount forkTest
 	sudo cp forkTest mnt/home
+	make doumount
+
+install_forkASID: domount forkASID
+	sudo cp forkASID mnt/home
+	make doumount
 
 #runInstall: install
 #	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux"
@@ -80,4 +90,4 @@ run:
 	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux"
 
 clean:
-	${RM} ${wildcard danabench xdhello pthreadHello}
+	${RM} ${wildcard danabench xdhello pthreadHello forkTest forkASID}

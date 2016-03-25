@@ -24,7 +24,7 @@ int main()
 	    array[i] = i+1;
 	}
 	// Code only executed by child process
-	printf("Child process\n");
+	printf("Child process: %d, my parent is: %d\n", getpid(), getppid());
 	globalVariable++;
 	iStackVariable++;
     }
@@ -36,13 +36,13 @@ int main()
     else                                   // parent
     {
 	// Code only executed by parent process
-	printf("Parent process\n");
+	printf("Parent process: %d, my parent is: %d\n", getpid(), getppid());
     }
 
     // Code executed by both parent and child.
     printf("global: %d stack: %d\n", globalVariable, iStackVariable);
     printf("0x%x\n", array);
-    printf("%d\n", *array);
+    //printf("%d\n", *array);
     
     return 0;
 }
