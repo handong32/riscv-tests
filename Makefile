@@ -1,4 +1,7 @@
+ARCH=riscv
 CC=riscv64-unknown-linux-gnu-gcc
+COMPILER=riscv64-unknown-linux-gnu-
+obj-m := hello_mod.o
 LDFLAGS=-static -march=RV64IMAFDXcustom
 LIBS=-lpthread
 CFLAGS=${LDFLAGS}
@@ -8,6 +11,7 @@ FPGA=root@fpga0
 FESRV=./fesvr-zynq
 XD = /opt/xfiles-dana
 XDR = $(shell pwd)
+KERNELDIR := ~/github/riscv-linux/linux
 
 XFILESINCS=-I $(XD)/src/main/c -I $(XD)/usr/include
 XFILESLIBS=-L $(XDR)/../rocket-chip/xfiles-dana/build -lxfiles -L $(XDR)/../rocket-chip/xfiles-dana/build/fann-rv -lfann -lfixedfann -lfloatfann -ldoublefann -lm
@@ -44,6 +48,9 @@ forkTest: tests/forkTest.c
 forkASID: tests/forkASID.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
+hello_mod: tests/hello_mod.c
+	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
+
 mnt:
 	mkdir mnt
 
@@ -60,6 +67,10 @@ doumount:
 #	sudo cp testfloat mnt/home
 #	sudo cp xorSigmoidSymmetric-fixed.16bin /mnt/home
 #	sudo umount mnt
+
+install_mod: domount
+	sudo cp tests/hello_mod.ko mnt/home
+	make doumount
 
 install_xdhello: domount xdhello
 	sudo cp xdhello mnt/home
@@ -91,3 +102,4 @@ run:
 
 clean:
 	${RM} ${wildcard danabench xdhello pthreadHello forkTest forkASID}
+	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) clean
