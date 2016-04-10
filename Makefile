@@ -14,51 +14,56 @@ XDR = $(shell pwd)
 KERNELDIR := ~/github/riscv-linux/linux
 
 XFILESINCS=-I $(XD)/src/main/c -I $(XD)/usr/include
-XFILESLIBS=-L $(XDR)/../rocket-chip/xfiles-dana/build -lxfiles -L $(XDR)/../rocket-chip/xfiles-dana/build/fann-rv -lfann -lfixedfann -lfloatfann -ldoublefann -lm
-FANNLIBS=-L $(XDR)/../rocket-chip/xfiles-dana/build/fann/src
+XFILESLIBS=-L /opt/xfiles-dana/build/linux -lxfiles -L /opt/xfiles-dana/build/fann-rv-linux -lfann -lfixedfann -lfloatfann -ldoublefann -lm
+FANNLIBS=-L $(XDR)/../xfiles-dana/build/fann/src
 
 CFLAGS+=${XFILESINCS} 
 LIBS+=${XFILESLIBS}
 
-.PHONY: domount doumount mnt install
+#.PHONY: domount doumount mnt install
 
-all: danabench xdhello testfloat
-
-danabench: DANA_BENCHMARK.c
-	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+#all: danabench xdhello testfloat
 
 xdhello: tests/xdhello.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 
-testfloat: testfloat.c
-	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
-
 mushroom_linux: mushroom.c
-	gcc ${FANNLIBS} -I$(XDR)/../rocket-chip/xfiles-dana/submodules/fann/src/include -static $< -o $@ -lfann -lfixedfann -lfloatfann -ldoublefann -lm
+	gcc ${FANNLIBS} -I$(XDR)/../xfiles-dana/submodules/fann/src/include -static $< -o $@ -lfann -lfixedfann -lfloatfann -ldoublefann -lm
 
 mushroom_x: mushroom.c
 	${CC} -static -march=RV64IMAFDXcustom -static -I$(XD)/src/main/c -I$(XDR)/../rocket-chip/xfiles-dana/submodules/fann/src/include $< -o $@ ${LIBS}
 
 pthreadHello: tests/pthreadHello.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp pthreadHello initramfs/home/
 
 forkTest: tests/forkTest.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp forkTest initramfs/home/
 
 forkASID: tests/forkASID.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp forkASID initramfs/home/
 
-hello_mod: tests/hello_mod.c
-	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
+test: tests/test.c
+	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp test initramfs/home/
 
-mnt:
-	mkdir mnt
+#hello_mod: tests/hello_mod.c
+#	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
 
-domount: 
-	sudo mount -o loop ${DISK} mnt
+bbl:
+	cd /home/handong/github/riscv-linux/linux && make -j ARCH=riscv vmlinux
+	cd riscv-pk/build && make -j
 
-doumount:
-	sudo umount mnt
+#mnt:
+#	mkdir mnt
+
+#domount: 
+#	sudo mount -o loop ${DISK} mnt
+
+#doumount:
+#	sudo umount mnt
 
 #install: danabench xdhello domount testfloat
 #	sudo cp danabench mnt/home
@@ -68,25 +73,25 @@ doumount:
 #	sudo cp xorSigmoidSymmetric-fixed.16bin /mnt/home
 #	sudo umount mnt
 
-install_mod: domount
-	sudo cp tests/hello_mod.ko mnt/home
-	make doumount
+#install_mod: domount
+#	sudo cp tests/hello_mod.ko mnt/home
+#	make doumount
 
-install_xdhello: domount xdhello
-	sudo cp xdhello mnt/home
-	make doumount
+#install_xdhello: domount xdhello
+#	sudo cp xdhello mnt/home
+#	make doumount
 
-install_pthreadHello: domount pthreadHello
-	sudo cp pthreadHello mnt/home
-	make doumount
+#install_pthreadHello: domount pthreadHello
+#	sudo cp pthreadHello mnt/home
+#	make doumount
 
-install_forkTest: domount forkTest
-	sudo cp forkTest mnt/home
-	make doumount
+#install_forkTest: domount forkTest
+#	sudo cp forkTest mnt/home
+#	make doumount
 
-install_forkASID: domount forkASID
-	sudo cp forkASID mnt/home
-	make doumount
+#install_forkASID: domount forkASID
+#	sudo cp forkASID mnt/home
+#	make doumount
 
 #runInstall: install
 #	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux"
@@ -97,9 +102,9 @@ install_forkASID: domount forkASID
 #runWorking:
 #	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux.working"
 
-run:
-	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux"
+run: test bbl
+	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
 clean:
 	${RM} ${wildcard danabench xdhello pthreadHello forkTest forkASID}
-	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) clean
+#$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) clean
