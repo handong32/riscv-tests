@@ -3,4 +3,5 @@
 # Do your stuff here.
 #echo "This script just mounts and boots the rootfs, nothing else!"
 #echo "hello"
+/bin/busybox mount -t proc proc /proc
 /bin/busybox ash
