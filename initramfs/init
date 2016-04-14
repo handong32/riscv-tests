@@ -4,4 +4,5 @@
 #echo "This script just mounts and boots the rootfs, nothing else!"
 #echo "hello"
 /bin/busybox mount -t proc proc /proc
+/bin/busybox mount -t devtmpfs devtmpfs /dev
 /bin/busybox ash

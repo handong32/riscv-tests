@@ -13,7 +13,7 @@ XD = /opt/xfiles-dana
 XDR = $(shell pwd)
 KERNELDIR := ~/github/riscv-linux/linux
 
-XFILESINCS=-I $(XD)/src/main/c -I $(XD)/usr/include
+XFILESINCS=-I $(XD) -I $(XD)/usr/include
 XFILESLIBS=-L /opt/xfiles-dana/build/linux -lxfiles -L /opt/xfiles-dana/build/fann-rv-linux -lfann -lfixedfann -lfloatfann -ldoublefann -lm
 FANNLIBS=-L $(XDR)/../xfiles-dana/build/fann/src
 
@@ -48,6 +48,10 @@ forkASID: tests/forkASID.c
 test: tests/test.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 	cp test initramfs/home/
+
+ebbioctl: tests/ebbioctl.c
+	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp ebbioctl initramfs/home/
 
 #hello_mod: tests/hello_mod.c
 #	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
@@ -102,7 +106,7 @@ bbl:
 #runWorking:
 #	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux.working"
 
-run: test bbl
+run:
 	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
 clean:
