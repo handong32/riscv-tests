@@ -14,7 +14,7 @@ XDR = $(shell pwd)
 KERNELDIR := ~/github/riscv-linux/linux
 
 XFILESINCS=-I $(XD) -I $(XD)/usr/include
-XFILESLIBS=-L /opt/xfiles-dana/build/linux -lxfiles -L /opt/xfiles-dana/build/fann-rv-linux -lfann -lfixedfann -lfloatfann -ldoublefann -lm
+XFILESLIBS=-L /opt/xfiles-dana/build/linux -lxfiles-user -L /opt/xfiles-dana/build/fann-rv-linux -lfann -lfixedfann -lfloatfann -ldoublefann -lm
 FANNLIBS=-L $(XDR)/../xfiles-dana/build/fann/src
 
 CFLAGS+=${XFILESINCS} 
@@ -44,6 +44,10 @@ forkTest: tests/forkTest.c
 forkASID: tests/forkASID.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 	cp forkASID initramfs/home/
+
+fann-xfiles.rv: tests/fann-xfiles.c
+	riscv64-unknown-elf-gcc -static -march=RV64IMAFDXcustom ${XFILESINCS} -I{XD}/build/nets tests/fann-xfiles.c -o fann-xfiles.rv -L /opt/xfiles-dana/build/newlib -lxfiles-user -L /opt/xfiles-dana/build/fann-rv-newlib -lfixedfann -lm
+	cp fann-xfiles.rv initramfs/home/
 
 test: tests/test.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
@@ -107,6 +111,9 @@ bbl:
 #	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux.working"
 
 run:
+	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
+
+runTest: ebbioctl bbl
 	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
 clean:
