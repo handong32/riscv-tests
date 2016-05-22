@@ -26,13 +26,12 @@
 #define BUFFER_LENGTH 256           ///< The buffer length (crude but fine)
 static char receive[BUFFER_LENGTH]; ///< The receive buffer from the LKM
 
-//#include "/home/handong/github/riscv-tests/tests/dev_ioctl.h"
-
 #define MAJOR_NUM 101
 #define IOCTL_SET_FILESIZE _IOR(MAJOR_NUM, 0, xlen_t *)
 #define IOCTL_SET_NN _IOR(MAJOR_NUM, 1, xlen_t *)
 #define IOCTL_SHOW_ANT _IO(MAJOR_NUM, 2)
 #define IOCTL_PHYS_ADDR _IO(MAJOR_NUM, 3)
+#define IOCTL_TRANS_PHYS_ADDR _IOR(MAJOR_NUM, 4, xlen_t*)
 
 typedef struct {
   int cycles;
@@ -68,20 +67,6 @@ size_t num_input, num_output;
 double multiplier;
 // Train on the provided data
 tid_type tid;
-
-#define PAGEMAP_ENTRY 8
-#define GET_BIT(X,Y) (X & ((uint64_t)1<<Y)) >> Y
-#define GET_PFN(X) X & 0x7FFFFFFFFFFFFF
-
-const int __endian_bit = 1;
-#define is_bigendian() ( (*(char*)&__endian_bit) == 0 )
-
-int pid, status;
-unsigned long virt_addr; 
-uint64_t read_val, file_offset;
-char path_buf [0x100] = {};
-FILE * f;
-char *end;
 
 void writedev(int fd, char *s, int len) {
   int ret = write(fd, s, len); // Send the string to the LKM
@@ -342,70 +327,16 @@ dumpNNBytes(xlen_t *addr, xlen_t size)
     printf("\n\n");
 }
 
-int read_pagemap(char * path_buf, unsigned long virt_addr){
-    int i, c;
-    
-   printf("Big endian? %d\n", is_bigendian());
-   f = fopen(path_buf, "rb");
-   if(!f){
-      printf("Error! Cannot open %s\n", path_buf);
-      return -1;
-   }
-   
-   //Shifting by virt-addr-offset number of bytes
-   //and multiplying by the size of an address (the size of an entry in pagemap file)
-   file_offset = virt_addr / getpagesize() * PAGEMAP_ENTRY;
-   printf("Vaddr: 0x%lx, Page_size: %d, Entry_size: %d\n", virt_addr, getpagesize(), PAGEMAP_ENTRY);
-   printf("Reading %s at 0x%llx\n", path_buf, (unsigned long long) file_offset);
-   status = fseek(f, file_offset, SEEK_SET);
-   if(status){
-      perror("Failed to do fseek!");
-      return -1;
-   }
-   errno = 0;
-   read_val = 0;
-   unsigned char c_buf[PAGEMAP_ENTRY];
-   for(i=0; i < PAGEMAP_ENTRY; i++){
-      c = getc(f);
-      if(c==EOF){
-         printf("\nReached end of the file\n");
-         return 0;
-      }
-      if(is_bigendian())
-           c_buf[i] = c;
-      else
-           c_buf[PAGEMAP_ENTRY - i - 1] = c;
-      printf("[%d]0x%x ", i, c);
-   }
-   for(i=0; i < PAGEMAP_ENTRY; i++){
-      //printf("%d ",c_buf[i]);
-      read_val = (read_val << 8) + c_buf[i];
-   }
-   printf("\n");
-   printf("Result: 0x%llx\n", (unsigned long long) read_val);
-   //if(GET_BIT(read_val, 63))
-   if(GET_BIT(read_val, 63))
-      printf("PFN: 0x%llx\n",(unsigned long long) GET_PFN(read_val));
-   else
-      printf("Page not present\n");
-   if(GET_BIT(read_val, 62))
-      printf("Page swapped\n");
-   fclose(f);
-   return 0;
-}
-
-
-
 int main(int argc, char **argv) {
   int ret, fd;
   char s[BUFFER_LENGTH];
   xlen_t temp;
   
-  //test_init(3, 7);
-  //max_epochs = 1;
-  //flags.mse = 1; //report mse
-  //mse_reporting_period = 10; //report everyone 10 epochs
-  //flags.incremental = 0; //
+  test_init(3, 7);
+  max_epochs = 1;
+  flags.mse = 1; //report mse
+  mse_reporting_period = 10; //report everyone 10 epochs
+  flags.incremental = 0; //
   
   // set xs bits, generates illegal instruction trap
   printf("Calling xfiles_dana_id 1\n");
@@ -420,7 +351,7 @@ int main(int argc, char **argv) {
     perror("Failed to open the device...");
     return errno;
   }
-  /*
+  
   strcpy(s, "createant");
   writedev(fd, s, strlen(s));
 
@@ -438,48 +369,11 @@ int main(int argc, char **argv) {
   file_size = stat.st_size / sizeof(xlen_t);
   file_size += (stat.st_size % sizeof(xlen_t)) ? 1 : 0;
   printf("file_size %d, fbytes %d\n", file_size, fbytes);
-  */
-  xlen_t* temp2 = (xlen_t*)malloc(5*sizeof(xlen_t));
-  for(xlen_t i = 0; i < 5; i++)
-  {
-      temp2[i] = 99-i;
-      //debug_write_mem((uint32_t)i, temp2+i);
-      printf("temp2[%ld] = 0x%lx\n", i, temp2[i]);
-  }
   
-  printf("[USER] virt temp2: %p \n", temp2);
-  
-  xlen_t xfphys = debug_virt_to_phys(temp2);
-  printf("[USER] debug_virt_to_phys(temp2) = 0x%lx\n", xfphys);
-
-  xlen_t xfphys2 = debug_virt_to_phys(temp2+1);
-  printf("[USER] debug_virt_to_phys(temp2+1) = 0x%lx\n", xfphys2);
-
-  xlen_t xfphys_val_1 = debug_read_utl((void*)xfphys);
-  printf("[USER] xfphys_val_1 = 0x%lx\n", xfphys_val_1);
-
-  xlen_t xfphys_val_2 = debug_read_utl((void*)xfphys2);
-  printf("[USER] xfphys_val_2 = 0x%lx\n", xfphys_val_2);
-
-  printf("[USER] pid = %d\n", getpid());
-  
-  ret = ioctl(fd, IOCTL_SET_NN, &temp2);
-  if (ret < 0) handle_error("IOCTL_SET_NN");
-  
-
-  //temp = debug_read_mem(temp2);
-  //printf("[USER] debug_read_mem(temp2) = %ld\n", temp);
-
-  //temp = debug_read_mem((void*)xfphys);
-  //printf("[USER] debug_read_mem(temp2) = %ld\n", temp);
-
-  /*
   xlen_t *addr;
   addr = (xlen_t *)mmap(NULL, fbytes, PROT_READ, MAP_SHARED | MAP_LOCKED, nfd, 0);
   if (addr == MAP_FAILED) handle_error("mmap");
 
-  //dumpNNBytes(addr, file_size);
- 
   ret = ioctl(fd, IOCTL_SET_FILESIZE, &fbytes);
   if (ret < 0) handle_error("IOCTL_SET_FILESIZE");
 
@@ -489,8 +383,7 @@ int main(int argc, char **argv) {
 
   ret = ioctl(fd, IOCTL_SHOW_ANT);
   if (ret < 0) handle_error("IOCTL_SHOW_ANT");
-  
-  
+    
   // Read the binary point and make sure its sane
   binary_point =
       binary_config_read_binary_point(addr, binary_point_width) +
@@ -548,27 +441,9 @@ int main(int argc, char **argv) {
   }
   printf("[INFO] Computed learning rate is 0x%x\n", learn_rate);
 
-  xfiles_batch_verbose();
-  
-  printf("[DEBUG] START \n");
-  
-  temp = debug_echo_via_reg(255);
-  printf("[DEBUG] debug_echo_via_reg(255) = %ld\n", temp);
-  
-  
-  //temp = debug_read_mem(&temp2[1]);
-  //printf("[DEBUG] debug_read_mem(&temp2[1]) = %ld\n", temp);
-
-  printf("[DEBUG] END \n");*/
-  
-
-
   //xfiles_batch_verbose();
-  //if (exit_code) {
-  //    printf("[ERROR] Saw exit code %d\n", exit_code);
-  //}
-
-  //close(nfd);
+  
+  close(nfd);
   close(fd);
 
   printf("End of the program\n");

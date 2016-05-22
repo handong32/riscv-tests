@@ -9,12 +9,13 @@ DISK=root.bin
 MYDIR = $(MYDIRF)
 FPGA=root@fpga0
 FESRV=./fesvr-zynq
-XD = /opt/xfiles-dana
+XD = ~/github/xfiles-dana
+#XD = /opt/xfiles-dana
 XDR = $(shell pwd)
 KERNELDIR := ~/github/riscv-linux/linux
 
 XFILESINCS=-I $(XD) -I $(XD)/usr/include
-XFILESLIBS=-L /opt/xfiles-dana/build/linux -lxfiles-user -L /opt/xfiles-dana/build/fann-rv-linux -lfann -lfixedfann -lfloatfann -ldoublefann -lm
+XFILESLIBS=-L $(XD)/build/linux -lxfiles-user -L $(XD)/build/fann-rv-linux -lfixedfann -lm
 FANNLIBS=-L $(XDR)/../xfiles-dana/build/fann/src
 
 CFLAGS+=${XFILESINCS} 
@@ -45,77 +46,30 @@ forkASID: tests/forkASID.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 	cp forkASID initramfs/home/
 
-fann-xfiles.rv: tests/fann-xfiles.c
-	riscv64-unknown-elf-gcc -static -march=RV64IMAFDXcustom ${XFILESINCS} -I{XD}/build/nets tests/fann-xfiles.c -o fann-xfiles.rv -L /opt/xfiles-dana/build/newlib -lxfiles-user -L /opt/xfiles-dana/build/fann-rv-newlib -lfixedfann -lm
-	cp fann-xfiles.rv initramfs/home/
+pkxf.rv: tests/fann-xfiles.c
+	riscv64-unknown-elf-gcc -DPROXYK -static -march=RV64IMAFDXcustom ${XFILESINCS} -I/tests -I{XD}/build/nets tests/fann-xfiles.c -o $@ -L /opt/xfiles-dana/build/newlib -lxfiles-user -L /opt/xfiles-dana/build/fann-rv-newlib -lfixedfann -lm
 
-test: tests/test.c
+lxfx.rv: tests/fann-xfiles.c
+	${CC} -static -march=RV64IMAFDXcustom ${XFILESINCS} -I/tests -I{XD}/build/nets tests/fann-xfiles.c -o $@ -L /opt/xfiles-dana/build/linux -lxfiles-user -lxfiles-supervisor -L /opt/xfiles-dana/build/fann-rv-linux -lfixedfann -lm
+	cp $@ initramfs/home/
+
+xfmem.rv: tests/xfmem.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
-	cp test initramfs/home/
+	cp xfmem.rv initramfs/home/
 
-ebbioctl: tests/ebbioctl.c
+xfapp.rv: tests/xfapp.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
-	cp ebbioctl initramfs/home/
-
-#hello_mod: tests/hello_mod.c
-#	$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) CROSS_COMPILE=$(COMPILER) modules
+	cp xfapp.rv initramfs/home/
 
 bbl:
 	cd /home/handong/github/riscv-linux/linux && make -j ARCH=riscv vmlinux
 	cd riscv-pk/build && make -j
 
-#mnt:
-#	mkdir mnt
-
-#domount: 
-#	sudo mount -o loop ${DISK} mnt
-
-#doumount:
-#	sudo umount mnt
-
-#install: danabench xdhello domount testfloat
-#	sudo cp danabench mnt/home
-#	sudo cp xdhello mnt/home
-#	sudo cp mushroom_x mnt/home
-#	sudo cp testfloat mnt/home
-#	sudo cp xorSigmoidSymmetric-fixed.16bin /mnt/home
-#	sudo umount mnt
-
-#install_mod: domount
-#	sudo cp tests/hello_mod.ko mnt/home
-#	make doumount
-
-#install_xdhello: domount xdhello
-#	sudo cp xdhello mnt/home
-#	make doumount
-
-#install_pthreadHello: domount pthreadHello
-#	sudo cp pthreadHello mnt/home
-#	make doumount
-
-#install_forkTest: domount forkTest
-#	sudo cp forkTest mnt/home
-#	make doumount
-
-#install_forkASID: domount forkASID
-#	sudo cp forkASID mnt/home
-#	make doumount
-
-#runInstall: install
-#	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux"
-
-#runOrig:
-#	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux.orig"
-
-#runWorking:
-#	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} +disk=${MYDIR}/${DISK} ${MYDIR}/bbl ${MYDIR}/vmlinux.working"
-
-run:
+run: bbl
 	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
-runTest: ebbioctl bbl
-	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
+runTest: xfmem.rv xfapp.rv bbl
+	ssh -i /opt/etc/fpga-ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
 clean:
-	${RM} ${wildcard danabench xdhello pthreadHello forkTest forkASID}
-#$(MAKE) -C $(KERNELDIR) M=$(XDR) ARCH=$(ARCH) clean
+	${RM} ${wildcard *.rv}
