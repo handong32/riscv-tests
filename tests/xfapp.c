@@ -228,35 +228,39 @@ int xfiles_eval_batch(int item_start, int item_stop) {
 
 xlen_t my_write_data(tid_type tid, element_type * data, size_t count) {
     const size_t shift = sizeof(xlen_t) * 8 - RESP_CODE_WIDTH;
-  xlen_t out;
+    xlen_t out;
 
-  // There are two types of writes available to users determined by
-  // whether or not "isLast" (bit 2) is set. We write all but the last
-  // data value with "isLast" deasserted (funct == 1). The tid goes in
-  // rs1 and data goes in rs2.
-  int write_index = 0;
-  while (write_index != count - 1) {
-    XFILES_INSTRUCTION(out, tid, data[write_index], t_USR_WRITE_DATA);
-    int exit_code = out >> shift;
-    switch (exit_code) {
-      case resp_OK: write_index++; continue;
-      case resp_QUEUE_ERR: continue;
-      default: return exit_code;
+    printf("write start\n");
+    // There are two types of writes available to users determined by
+    // whether or not "isLast" (bit 2) is set. We write all but the last
+    // data value with "isLast" deasserted (funct == 1). The tid goes in
+    // rs1 and data goes in rs2.
+    int write_index = 0;
+    while (write_index != count - 1) {
+	XFILES_INSTRUCTION(out, tid, data[write_index], t_USR_WRITE_DATA);
+	int exit_code = out >> shift;
+	switch (exit_code) {
+	case resp_OK: write_index++; continue;
+	case resp_QUEUE_ERR: continue;
+	default: return exit_code;
+	}
     }
-  }
+    printf("write end\n");
 
-  // Finally, we write the last data value with "isLast" set (funct ==
-  // 5). When the X-Files Arbiter sees this "isLast" bit, it enables
-  // execution of the transaction.
-  while (1) {
-    XFILES_INSTRUCTION(out, tid, data[write_index], t_USR_WRITE_DATA_LAST);
-    int exit_code = out >> shift;
-    switch (exit_code) {
-      case resp_OK: return 0;
-      case resp_QUEUE_ERR: continue;
-      default: return exit_code;
+    printf("write isLast start\n");
+    // Finally, we write the last data value with "isLast" set (funct ==
+    // 5). When the X-Files Arbiter sees this "isLast" bit, it enables
+    // execution of the transaction.
+    while (1) {
+	XFILES_INSTRUCTION(out, tid, data[write_index], t_USR_WRITE_DATA_LAST);
+	int exit_code = out >> shift;
+	switch (exit_code) {
+	case resp_OK: return 0;
+	case resp_QUEUE_ERR: continue;
+	default: return exit_code;
+	}
     }
-  }
+    printf("write isLast end\n");
 }
 
 xlen_t my_write_data_train_incremental(tid_type tid, element_type * input,
@@ -381,6 +385,9 @@ int main(int argc, char **argv) {
   ret = ioctl(fd, IOCTL_SET_NN, &addr);
   if (ret < 0) handle_error("IOCTL_SET_NN");
 
+  //ret = ioctl(fd, IOCTL_PHYS_ADDR);
+  //if (ret < 0) handle_error("IOCTL_PHYS_ADDR");
+  
   ret = ioctl(fd, IOCTL_SHOW_ANT);
   if (ret < 0) handle_error("IOCTL_SHOW_ANT");
     
@@ -441,7 +448,7 @@ int main(int argc, char **argv) {
   }
   printf("[INFO] Computed learning rate is 0x%x\n", learn_rate);
 
-  //xfiles_batch_verbose();
+  xfiles_batch_verbose();
   
   close(nfd);
   close(fd);
