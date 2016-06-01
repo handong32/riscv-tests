@@ -61,6 +61,10 @@ xfapp.rv: tests/xfapp.c
 	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
 	cp xfapp.rv initramfs/home/
 
+xftest.rv: tests/xftest.c
+	${CC} ${CFLAGS} -static $< -o $@ ${LIBS}
+	cp xftest.rv initramfs/home/
+
 bbl:
 	cd /home/handong/github/riscv-linux/linux && make -j ARCH=riscv vmlinux
 	cd riscv-pk/build && make -j
@@ -68,7 +72,7 @@ bbl:
 run: bbl
 	ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
-runTest: xfmem.rv xfapp.rv bbl
+runTest: xfmem.rv xfapp.rv xftest.rv bbl
 	ssh -i /opt/etc/fpga-ssh -t ${FPGA}  ". /home/root/.profile; ${FESRV} ${MYDIR}/riscv-pk/build/bbl"
 
 clean:
