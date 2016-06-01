@@ -337,9 +337,9 @@ int main(int argc, char **argv) {
   xlen_t temp;
   
   test_init(3, 7);
-  max_epochs = 1;
+  max_epochs = 10;
   flags.mse = 1; //report mse
-  mse_reporting_period = 10; //report everyone 10 epochs
+  mse_reporting_period = 1; //report everyone 10 epochs
   flags.incremental = 0; //
   
   // set xs bits, generates illegal instruction trap
@@ -385,12 +385,13 @@ int main(int argc, char **argv) {
   ret = ioctl(fd, IOCTL_SET_NN, &addr);
   if (ret < 0) handle_error("IOCTL_SET_NN");
 
-  //ret = ioctl(fd, IOCTL_PHYS_ADDR);
-  //if (ret < 0) handle_error("IOCTL_PHYS_ADDR");
+  ret = ioctl(fd, IOCTL_PHYS_ADDR);
+  if (ret < 0) handle_error("IOCTL_PHYS_ADDR");
   
-  ret = ioctl(fd, IOCTL_SHOW_ANT);
-  if (ret < 0) handle_error("IOCTL_SHOW_ANT");
+  //ret = ioctl(fd, IOCTL_SHOW_ANT);
+  //if (ret < 0) handle_error("IOCTL_SHOW_ANT");
     
+  
   // Read the binary point and make sure its sane
   binary_point =
       binary_config_read_binary_point(addr, binary_point_width) +

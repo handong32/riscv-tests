@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     }
   
     printf("[USER] virt temp2: %p \n", temp2);
-  
+    
     xlen_t xfphys = debug_virt_to_phys(temp2);
     printf("[USER] debug_virt_to_phys(temp2) = 0x%lx\n", xfphys);
 
@@ -87,14 +87,14 @@ int main(int argc, char **argv) {
   
     ret = ioctl(fd, IOCTL_TRANS_PHYS_ADDR, &temp2);
     if (ret < 0) handle_error("IOCTL_TRANS_PHYS_ADDR");
-  
     nfd = open("xorSigmoidSymmetric-fixed.16bin", O_RDONLY);
+    
     assert(nfd!=-1);
     fstat(nfd, &stat);
     fbytes = (xlen_t)stat.st_size;
     file_size = stat.st_size / sizeof(xlen_t);
     file_size += (stat.st_size % sizeof(xlen_t)) ? 1 : 0;
-
+    
     xlen_t *addr;
     addr = (xlen_t *)mmap(NULL, fbytes, PROT_READ, MAP_SHARED | MAP_LOCKED, nfd, 0);
     if (addr == MAP_FAILED) handle_error("mmap");
