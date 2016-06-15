@@ -10,37 +10,59 @@
 #include <assert.h>
 #include <stdint.h>
 
-#define handle_error(msg)                                                      \
-    do {								\
-	perror(msg);							\
-	exit(EXIT_FAILURE);						\
+#define handle_error(msg)    \
+    do {	             \
+	perror(msg);         \
+	exit(EXIT_FAILURE);  \
     } while (0)
 
-#define MAJOR_NUM 101
-#define IOCTL_SET_FILESIZE _IOR(MAJOR_NUM, 0, xlen_t *)
-#define IOCTL_SET_NN _IOR(MAJOR_NUM, 1, xlen_t *)
-#define IOCTL_SHOW_ANT _IO(MAJOR_NUM, 2)
-#define IOCTL_PHYS_ADDR _IO(MAJOR_NUM, 3)
-#define IOCTL_TRANS_PHYS_ADDR _IOR(MAJOR_NUM, 4, xlen_t*)
-#define IOCTL_TEST _IO(MAJOR_NUM, 5)
+
+struct nndesc {
+    int fd;
+    void *addr;
+    struct stat stat;
+};
+
+void
+nnDump(struct nndesc *this)
+{
+    printf("0x%p: fd=%d addr=0x%p stat.st_size=%ld\n", 
+	   this, this->fd, this->addr, this->stat.st_size);
+}     
 
 int main (int argc, char **argv)
 {
-    int ret, fd;
-    
+    int ret, xfd;
+    struct nndesc nn;
+    char *buffer;
+
     printf("[USER] Starting XFDdevice code example...\n");
-    fd = open("/dev/xfd", O_RDWR); // Open the device with read/write access
-    if (fd < 0) {
+    xfd = open(argv[1], O_RDWR); // Open the device with read/write access
+    if (xfd < 0) {
 	perror("Failed to open the device...");
 	return errno;
     }
 
     printf("[USER] PID = %d\n", getpid());
 
-    ret = ioctl(fd, IOCTL_TEST);
-    if (ret < 0) handle_error("IOCTL_TEST");
-    
-    close(fd);
+    nn.fd = open(argv[2], O_RDWR);
+    assert(nn.fd != -1);
+
+    assert(fstat(nn.fd, &nn.stat)==0);
+
+    nn.addr = mmap(NULL, nn.stat.st_size, PROT_WRITE, MAP_PRIVATE, nn.fd, 0);
+
+    nnDump(&nn);
+
+    if (write(xfd, nn.addr + 1, nn.stat.st_size) != -1) assert(0);
+    perror("ERROR: write failed: ");
+
+    assert(posix_memalign((void **)&buffer, 4096, 4096)==0);
+    assert(write(xfd, buffer, 4096) == 4096);
+
+    assert(write(xfd, nn.addr, nn.stat.st_size) == nn.stat.st_size);
+   
+    close(xfd);
     
     return 0;
 }

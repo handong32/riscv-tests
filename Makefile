@@ -14,8 +14,8 @@ XD = ~/github/xfiles-dana
 XDR = $(shell pwd)
 KERNELDIR := ~/github/riscv-linux/linux
 
-XFILESINCS=-I $(XD) -I $(XD)/usr/include
-XFILESLIBS=-L $(XD)/build/linux -lxfiles-user -L $(XD)/build/fann-rv-linux -lfixedfann -lm
+XFILESINCS=-I $(XD) -I $(XD)/usr/include -I $(XDR)/xfd/src/include
+XFILESLIBS=-L $(XD)/build/linux -lxfiles-user -L $(XD)/build/fann-rv-linux -lfixedfann -L $(XDR)/xfd/lib -lxfd -lm
 FANNLIBS=-L $(XDR)/../xfiles-dana/build/fann/src
 
 CFLAGS+=${XFILESINCS} 
